@@ -1,0 +1,43 @@
+# Assign config — edit this file like a normal text file.
+# Lines starting with # are ignored. Use KEY = value for settings below.
+# Set ATTIO_API_TOKEN in your environment (e.g. .env or export).
+
+# Attio object type (e.g. unassigned_accounts)
+OBJECT_TYPE = unassigned_accounts
+
+# Rep names, comma-separated. Order affects tiebreaker when workloads are equal.
+REPS = Alice, Bob, Carol
+
+# Max "New" accounts per rep — rep becomes ineligible when they reach this many New (existing + assigned)
+MAX_NEW_THRESHOLD = 5
+
+# Industries that are eligible for assignment (comma-separated)
+ELIGIBLE_INDUSTRIES = Restaurants, Retail
+
+# Location count range (min and max, inclusive)
+MIN_LOCATIONS = 5
+MAX_LOCATIONS = 50
+
+# Where to save the run log (JSON) and summary folder (paths relative to project root)
+LOG_FILE = out/assignment_log.json
+SUMMARY_DIR = out/summaries
+
+# Fetch command: where to save eligible accounts CSV (fetch-only, no assignment)
+FETCH_CSV = out/record.csv
+
+# Workload weight per prospect status (higher = more effort). Format: Status:number, ...
+WORKLOAD_WEIGHTS = New:2, Working:1, Nurture:0.5
+
+# Industry score multiplier (1.0 = neutral). Format: Industry:number, ...
+INDUSTRY_WEIGHTS = Restaurants:1.0, Retail:1.0
+
+# Attribute mapping: our_key:attio_slug (used to build Account.data from Attio records) 
+# Add/remove attributes here — the code infers comapny name, industry, location_count, owner, prospect_status from key names. These are compulsory attributes and minimu requirement for the code logic to work.
+ATTRIBUTE_MAPPING = company_name:company_name, location_count:location_count, industry:industry_6, prospect_status:prospect_status_6, owner:owner_6
+
+# Well-known keys (must exist in ATTRIBUTE_MAPPING). Used for scoring, display, and assignment.
+DISPLAY_NAME_KEY = company_name
+INDUSTRY_KEY = industry
+LOCATION_COUNT_KEY = location_count
+OWNER_KEY = owner
+PROSPECT_STATUS_KEY = prospect_status

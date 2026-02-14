@@ -1,0 +1,46 @@
+# Seed config — edit this file like a normal text file.
+# Lines starting with # are ignored. Use KEY = value for settings below.
+
+# Where to save the CSV (path relative to project root)
+OUTPUT_PATH = out/seed_companies.csv
+
+# CSV column names, separated by commas. Order = column order in the file.
+COLUMNS = company_name, location_count, industry, prospect_status, owner
+
+# Which column to use for duplicate check (must be one of the columns above)
+DUPLICATE_KEY = company_name
+
+# How many rows to generate per run
+NUM_ROWS = 40
+
+# AI model and token limit (optional)
+MODEL = claude-opus-4-6
+MAX_TOKENS = 4096
+
+# ——— PROMPT ———
+# Everything below this line is sent to the AI.
+# You can use {num_rows} and {fieldnames} — they get replaced automatically.
+PROMPT
+Generate exactly {num_rows} unique fictional company names with realistic-sounding business names
+For each company, provide: {fieldnames}.
+
+Rules:
+
+1. OWNED ACCOUNTS (15 companies, owner is NOT empty):
+   - Carol: 5 companies total — 2 with prospect_status="New", 2 with prospect_status="Working", 1 with prospect_status="Nurture"
+   - Bob: 5 companies total — 1 with prospect_status="New", 2 with prospect_status="Working", 2 with prospect_status="Nurture"
+   - Alice: 5 companies total — 0 with prospect_status="New", 3 with prospect_status="Working", 2 with prospect_status="Nurture"
+   - Use a mix of industries and location_counts for these (vary freely).
+
+2. UNASSIGNED ACCOUNTS (15 companies, owner="" AND prospect_status=""):
+   - 16 ELIGIBLE: industry is "Restaurants" or "Retail", location_count between 5 and 50 (inclusive). Vary the location_counts well.
+   - 9 INELIGIBLE for clear reasons:
+     - 3 with location_count < 5 and industry "Restaurants" or "Retail"
+     - 2 with location_count > 50 and industry "Restaurants" or "Retail"
+     - 4 with industry "Healthcare" or "Other" and location_count between 5-50
+
+3. GENERAL:
+   - Industry distribution across all {num_rows}: Restaurants ~40%, Retail ~30%, Healthcare ~15%, Other ~15%
+   - Company names should be realistic and relevant to their industry
+
+Return ONLY a valid JSON array of {num_rows} objects — no markdown, no explanation, no backticks. Just the raw JSON array.

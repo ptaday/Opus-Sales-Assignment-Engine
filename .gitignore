@@ -1,0 +1,25 @@
+# Env and secrets
+.env
+.venv/
+venv/
+env/
+
+# Outputs
+out/
+*.csv
+assignment_log.json
+summaries/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store

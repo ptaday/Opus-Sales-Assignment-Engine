@@ -1,0 +1,131 @@
+"""Seed data: Claude API + CSV append."""
+import os
+import json
+import csv
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv() 
+
+try:
+    import anthropic
+except ImportError:
+    anthropic = None
+
+from src.utils.config import load_seed_config
+
+
+def _format_cell(value, key: str):
+    if value is None or value == "":
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return value
+
+
+def load_existing_keys(csv_path: Path, key_field: str) -> set:
+    existing = set()
+    if not csv_path.exists():
+        return existing
+    with open(csv_path, "r", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            val = row.get(key_field, "").strip().lower()
+            if val:
+                existing.add(val)
+    return existing
+
+
+def generate_companies(api_key: str, config: dict) -> list[dict]:
+    if not anthropic:
+        raise RuntimeError("anthropic package required for seed. pip install anthropic")
+    client = anthropic.Anthropic(api_key=api_key)
+    prompt = config["prompt"].format(
+        num_rows=config["num_rows"],
+        fieldnames=", ".join(config["fieldnames"]),
+    )
+    print("Calling Claude API to generate company data...")
+    message = client.messages.create(
+        model=config["model"],
+        max_tokens=config["max_tokens"],
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = message.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1]
+        raw = raw.rsplit("```", 1)[0]
+    companies = json.loads(raw)
+    for c in companies:
+        for field in config["fieldnames"]:
+            if field not in c:
+                raise ValueError(f"Missing field '{field}' in generated company: {c}")
+    print(f"Generated {len(companies)} companies from Claude API.")
+    return companies
+
+
+def append_to_csv(companies: list[dict], csv_path: Path, config: dict) -> tuple[int, int]:
+    fieldnames = config["fieldnames"]
+    duplicate_key = config["duplicate_key"]
+    existing = load_existing_keys(csv_path, duplicate_key)
+    file_exists = csv_path.exists()
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    added = skipped = 0
+    duplicates = []
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        if not file_exists:
+            writer.writeheader()
+        for company in companies:
+            key_val = (company.get(duplicate_key) or "").strip().lower()
+            if key_val in existing:
+                skipped += 1
+                duplicates.append(company.get(duplicate_key, ""))
+                continue
+            existing.add(key_val)
+            row = {k: _format_cell(company.get(k), k) for k in fieldnames}
+            writer.writerow(row)
+            added += 1
+    if duplicates:
+        print(f"\nDuplicates skipped: {duplicates}")
+    return added, skipped
+
+
+def _ask_overwrite_or_append(output_path: Path) -> bool:
+    if not output_path.exists():
+        return False
+    while True:
+        reply = input(
+            f"The file '{output_path}' already exists. "
+            "Overwrite (replace entire file) or append (add new rows)? [o/a]: "
+        ).strip().lower()
+        if reply in ("o", "overwrite"):
+            return True
+        if reply in ("a", "append"):
+            return False
+        print("Please enter 'o' for overwrite or 'a' for append.")
+
+
+def run_seed() -> None:
+    config = load_seed_config()
+    overwrite = _ask_overwrite_or_append(config["output_path"])
+    if overwrite:
+        config["output_path"].unlink(missing_ok=True)
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+
+    if not api_key or not api_key.strip():
+        raise ValueError(
+             "ANTHROPIC_API_KEY is missing or empty. "
+            "Please set it in your .env file."
+            )
+
+    companies = generate_companies(api_key, config)
+    added, skipped = append_to_csv(companies, config["output_path"], config)
+    total = 0
+    if config["output_path"].exists():
+        with open(config["output_path"], "r", newline="") as f:
+            total = sum(1 for _ in csv.DictReader(f))
+    print(f"\n--- Summary ---")
+    print(f"Generated:  {len(companies)}")
+    print(f"Added:      {added}")
+    print(f"Duplicates: {skipped}")
+    print(f"Total in {config['output_path']}: {total}")
