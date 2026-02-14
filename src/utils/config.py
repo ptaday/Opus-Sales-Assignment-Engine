@@ -7,7 +7,11 @@ CONFIG_DIR = _REPO_ROOT / "config"
 
 
 def _parse_key_value_pairs(s: str) -> dict:
-    """Parse 'Key:number, Key:number' into a dict."""
+    """
+    Parses a comma-separated 'Key:number' string into a dict of key -> int or float.
+    Input: s (str)
+    Output: dict
+    """
     out = {}
     for part in (s or "").split(","):
         part = part.strip()
@@ -23,7 +27,11 @@ def _parse_key_value_pairs(s: str) -> dict:
 
 
 def _parse_attribute_mapping(s: str) -> dict[str, str]:
-    """Parse 'key:slug, key:slug' into dict (our key -> Attio slug)."""
+    """
+    Parses a comma-separated 'key:slug' string into a dict mapping our key to Attio slug.
+    Input: s (str)
+    Output: dict[str, str]
+    """
     out = {}
     for part in (s or "").split(","):
         part = part.strip()
@@ -36,7 +44,11 @@ def _parse_attribute_mapping(s: str) -> dict[str, str]:
 
 
 def _resolve_path(path_str: str) -> Path:
-    """Resolve path relative to repo root; absolute stays as-is."""
+    """
+    Resolves path string relative to repo root; absolute paths are returned as-is; empty returns repo/out.
+    Input: path_str (str)
+    Output: Path
+    """
     path_str = (path_str or "").strip()
     if not path_str:
         return _REPO_ROOT / "out"
@@ -46,7 +58,11 @@ def _resolve_path(path_str: str) -> Path:
 
 
 def load_seed_config() -> dict:
-    """Load config/seed.txt. KEY = value; then line PROMPT and rest is prompt text."""
+    """
+    Loads config/seed.txt: KEY=value lines plus PROMPT section; returns dict with output_path, fieldnames, prompt, etc.
+    Input: None
+    Output: dict
+    """
     config_path = CONFIG_DIR / "seed.txt"
     if not config_path.exists():
         raise FileNotFoundError(f"Config not found: {config_path}")
@@ -86,7 +102,11 @@ def load_seed_config() -> dict:
 
 
 def load_assign_config() -> dict:
-    """Load config/assign.txt. KEY = value only."""
+    """
+    Loads config/assign.txt (KEY=value); returns dict with object_type, reps, thresholds, paths, weights, keys.
+    Input: None
+    Output: dict
+    """
     config_path = CONFIG_DIR / "assign.txt"
     defaults = {
         "OBJECT_TYPE": "unassigned_accounts",

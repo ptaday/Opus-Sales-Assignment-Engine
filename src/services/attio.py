@@ -13,6 +13,11 @@ from dotenv import load_dotenv
 
 class AttioService:
     def __init__(self, config: dict, api_token: str | None = None):
+        """
+        Initializes the Attio API service with config and token; sets object type, URLs, and attribute mappings.
+        Input: config (dict), api_token (str | None)
+        Output: None
+        """
         self.config = config
         self.token = api_token or os.environ.get("ATTIO_API_TOKEN", "") or dotenv.get_key(".env", "ATTIO_API_TOKEN")
         self.object_type = config["object_type"]
@@ -30,9 +35,19 @@ class AttioService:
         self.industry_slug = self.attribute_mapping.get(self.industry_key, "industry_6")
 
     def _headers(self):
+        """
+        Returns HTTP headers for Attio API requests (Bearer token and JSON content-type).
+        Input: None
+        Output: dict
+        """
         return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
 
     def _paginated_fetch(self, payload: dict, description: str) -> list[Account]:
+        """
+        Fetches all records from Attio query API with pagination and maps them to Account objects.
+        Input: payload (dict), description (str)
+        Output: list[Account]
+        """
         accounts = []
         offset = 0
         limit = payload.get("limit", 500)
@@ -58,7 +73,11 @@ class AttioService:
         return accounts
 
     def fetch_eligible_candidates(self) -> tuple[list[Account], list[Account]]:
-        """Server-side filter location + industry; filter owner empty in Python."""
+        """
+        Fetches candidates from Attio with server-side location/industry filter; splits into eligible (no owner) and skipped_owned.
+        Input: None
+        Output: tuple[list[Account], list[Account]]
+        """
         payload = {
             "filter": {
                 "$and": [
@@ -84,7 +103,11 @@ class AttioService:
         return eligible, skipped_owned
 
     def fetch_rep_accounts(self) -> list[Account]:
-        """Fetch all records, keep only owned by reps (for workload)."""
+        """
+        Fetches all records from Attio and returns only those owned by configured reps (for workload).
+        Input: None
+        Output: list[Account]
+        """
         payload = {"sorts": [], "limit": 500, "offset": 0}
         all_records = self._paginated_fetch(payload, "fetching rep accounts")
         owned = [a for a in all_records if a.get(self.owner_key) and a.get(self.owner_key) in self.reps]
@@ -92,7 +115,11 @@ class AttioService:
         return owned
 
     def fetch_skipped_unassigned(self) -> list[Account]:
-        """Unassigned records that fail eligibility (for dry-run summary)."""
+        """
+        Fetches unassigned records that fail eligibility (location/industry) for dry-run summary.
+        Input: None
+        Output: list[Account]
+        """
         payload = {"sorts": [], "limit": 500, "offset": 0}
         all_records = self._paginated_fetch(payload, "fetching skipped accounts")
         skipped = []
@@ -119,6 +146,11 @@ class AttioService:
         return skipped
 
     def verify_still_unassigned(self, record_id: str) -> bool:
+        """
+        Checks via API whether the record still has no owner (to avoid overwriting concurrent assignment).
+        Input: record_id (str)
+        Output: bool
+        """
         if not self.token:
             return True
         url = f"{API_BASE}/objects/{self.object_type}/records/{record_id}"
@@ -138,6 +170,11 @@ class AttioService:
             return True
 
     def update_attio_record(self, record_id: str, owner: str, retries: int = 3) -> bool:
+        """
+        Updates the Attio record's owner and prospect_status to New; retries on rate limit or network errors.
+        Input: record_id (str), owner (str), retries (int)
+        Output: bool
+        """
         if not self.token:
             print(f"  ⚠ No API token — skipping update for {record_id}")
             return False

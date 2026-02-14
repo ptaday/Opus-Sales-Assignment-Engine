@@ -4,8 +4,10 @@ import math
 
 def score_company(location_count: int, industry: str, industry_weights: dict) -> float:
     """
-    Score = location_score * industry_weight.
-    Location (0–70): 70 * ln(count) / ln(50), clamped.
+    Computes a company score as location_score (0–70, log-scaled) multiplied by industry weight.
+    location_score is calculated as 70 * ln(location_count) / ln(50), clamped between 0.0 and 70.0.
+    Input: location_count (int), industry (str), industry_weights (dict)
+    Output: float
     """
     if location_count <= 0:
         loc_score = 0.0

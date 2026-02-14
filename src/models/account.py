@@ -5,8 +5,9 @@ from typing import Any, Optional
 
 def _extract_entry_value(entries: list) -> Any:
     """
-    Extract a single value from Attio's value list (first entry).
-    Handles option (select), status, value (number/text), full_name.
+    Extracts a single value from Attio's value list (first entry)
+    Input: entries (list)
+    Output: Any
     """
     if not entries:
         return None
@@ -30,7 +31,11 @@ def _extract_entry_value(entries: list) -> Any:
 
 
 def _extract_from_values(values: dict, slug: str) -> Any:
-    """Get value for one Attio slug from record['values']."""
+    """
+    Gets the value for one Attio slug from record['values'].
+    Input: values (dict), slug (str)
+    Output: Any
+    """
     entries = values.get(slug, [])
     return _extract_entry_value(entries)
 
@@ -46,14 +51,19 @@ class Account:
     data: dict = field(default_factory=dict)
 
     def get(self, key: str, default: Any = None) -> Any:
-        """Convenience: read from data."""
+        """
+        Returns the value for key from the account's data dict, or default if missing.
+        Input: key (str), default (Any, optional)
+        Output: Any
+        """
         return self.data.get(key, default)
 
     @staticmethod
     def from_attio_record(record: dict, attribute_mapping: dict[str, str]) -> "Account":
         """
-        Build Account from Attio record. attribute_mapping: our_key -> attio_slug.
-        All mapped attributes go into data; fixed fields are set from record id.
+        Builds an Account from an Attio record using attribute_mapping (our_key -> attio_slug); mapped attributes go into data.
+        Input: record (dict), attribute_mapping (dict[str, str])
+        Output: Account
         """
         values = record.get("values", {})
         record_id = (record.get("id") or {}).get("record_id", "")

@@ -15,7 +15,7 @@ cp .env.example .env
 ## Config
 
 - **config/seed.txt** — output path, CSV columns, prompt, row count for seed data.
-- **config/assign.txt** — reps, industries, location range, workload weights for assignment.
+- **config/assign.txt** — reps, attio records, location range, workload weights for assignment.
 
 Edit these plain-text files; no code required.
 

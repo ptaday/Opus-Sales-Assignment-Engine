@@ -18,10 +18,20 @@ from src.services.seed_service import run_seed
 
 
 def cmd_seed() -> None:
+    """
+    Runs the seed command: generates company data via Claude API and appends to CSV.
+    Input: None
+    Output: None
+    """
     run_seed()
 
 
 def cmd_fetch() -> None:
+    """
+    Fetches eligible accounts from Attio API and appends new ones to the configured CSV (no assignment).
+    Input: None
+    Output: None
+    """
     config = load_assign_config()
     api_token = os.environ.get("ATTIO_API_TOKEN", "")
     if not api_token:
@@ -53,6 +63,11 @@ def cmd_fetch() -> None:
 
 
 def _print_summary(assigned, all_skipped, unassigned, rep_eligibility, dry_run: bool, display_name_key: str):
+    """
+    Prints an assignment summary to stdout: rep eligibility, assigned, skipped, and unassigned accounts.
+    Input: assigned (list), all_skipped (list), unassigned (list), rep_eligibility (dict), dry_run (bool), display_name_key (str)
+    Output: None
+    """
     mode = "DRY RUN" if dry_run else "LIVE RUN"
     print(f"\n{'='*65}\n  ASSIGNMENT SUMMARY ({mode})\n{'='*65}")
     print("\n-- Rep Eligibility --")
@@ -83,6 +98,11 @@ def _print_summary(assigned, all_skipped, unassigned, rep_eligibility, dry_run: 
 
 
 def _save_run_log(assigned, all_skipped, unassigned, rep_eligibility, write_results, log_file: Path, dry_run: bool, display_name_key: str):
+    """
+    Appends a run entry (assignments, skipped, unassigned, rep eligibility, write results) to the JSON log file.
+    Input: assigned (list), all_skipped (list), unassigned (list), rep_eligibility (dict), write_results (list), log_file (Path), dry_run (bool), display_name_key (str)
+    Output: None
+    """
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "mode": "dry_run" if dry_run else "live",
@@ -106,6 +126,11 @@ def _save_run_log(assigned, all_skipped, unassigned, rep_eligibility, write_resu
 
 
 def _save_summary_md(assigned, all_skipped, unassigned, rep_eligibility, write_results, summary_dir: Path, dry_run: bool, config: dict):
+    """
+    Writes a markdown summary file for the run (rep eligibility, assigned, skipped, unassigned, scoring reference).
+    Input: assigned (list), all_skipped (list), unassigned (list), rep_eligibility (dict), write_results (list), summary_dir (Path), dry_run (bool), config (dict)
+    Output: None
+    """
     display_name_key = config["display_name_key"]
     location_count_key = config["location_count_key"]
     industry_key = config["industry_key"]
@@ -158,6 +183,11 @@ def _save_summary_md(assigned, all_skipped, unassigned, rep_eligibility, write_r
 
 
 def cmd_assign(dry_run: bool) -> None:
+    """
+    Runs the assign workflow: loads config, fetches candidates, scores, assigns to reps, optionally writes to Attio, and saves summary/log.
+    Input: dry_run (bool)
+    Output: None
+    """
     config = load_assign_config()
     api_token = os.environ.get("ATTIO_API_TOKEN", "")
     if dry_run:
@@ -242,6 +272,11 @@ def cmd_assign(dry_run: bool) -> None:
 
 
 def main() -> None:
+    """
+    Entry point: parses CLI (seed | fetch | assign [--dry-run]) and dispatches to the corresponding command.
+    Input: None (reads sys.argv)
+    Output: None
+    """
     parser = argparse.ArgumentParser(description="Attio assignment & seed")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("seed", help="Generate seed data via Claude and append to CSV")

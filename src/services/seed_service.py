@@ -16,6 +16,11 @@ from src.utils.config import load_seed_config
 
 
 def _format_cell(value, key: str):
+    """
+    Normalizes a cell value for CSV: empty to empty string, strings stripped.
+    Input: value (any), key (str)
+    Output: str or original type
+    """
     if value is None or value == "":
         return ""
     if isinstance(value, str):
@@ -24,6 +29,11 @@ def _format_cell(value, key: str):
 
 
 def load_existing_keys(csv_path: Path, key_field: str) -> set:
+    """
+    Loads existing values for the given key field from CSV into a set (for duplicate detection).
+    Input: csv_path (Path), key_field (str)
+    Output: set
+    """
     existing = set()
     if not csv_path.exists():
         return existing
@@ -37,6 +47,11 @@ def load_existing_keys(csv_path: Path, key_field: str) -> set:
 
 
 def generate_companies(api_key: str, config: dict) -> list[dict]:
+    """
+    Calls Claude API with the seed prompt to generate a list of company dicts; validates required fields.
+    Input: api_key (str), config (dict)
+    Output: list[dict]
+    """
     if not anthropic:
         raise RuntimeError("anthropic package required for seed. pip install anthropic")
     client = anthropic.Anthropic(api_key=api_key)
@@ -64,6 +79,11 @@ def generate_companies(api_key: str, config: dict) -> list[dict]:
 
 
 def append_to_csv(companies: list[dict], csv_path: Path, config: dict) -> tuple[int, int]:
+    """
+    Appends company rows to CSV, skipping duplicates by duplicate_key; creates file/header if needed.
+    Input: companies (list[dict]), csv_path (Path), config (dict)
+    Output: tuple[int, int]
+    """
     fieldnames = config["fieldnames"]
     duplicate_key = config["duplicate_key"]
     existing = load_existing_keys(csv_path, duplicate_key)
@@ -91,6 +111,11 @@ def append_to_csv(companies: list[dict], csv_path: Path, config: dict) -> tuple[
 
 
 def _ask_overwrite_or_append(output_path: Path) -> bool:
+    """
+    Prompts user to choose overwrite or append when output file exists; returns True for overwrite, False for append.
+    Input: output_path (Path)
+    Output: bool
+    """
     if not output_path.exists():
         return False
     while True:
@@ -106,6 +131,11 @@ def _ask_overwrite_or_append(output_path: Path) -> bool:
 
 
 def run_seed() -> None:
+    """
+    Orchestrates seed: loads config, asks overwrite/append, generates companies via Claude, appends to CSV, prints summary.
+    Input: None
+    Output: None
+    """
     config = load_seed_config()
     overwrite = _ask_overwrite_or_append(config["output_path"])
     if overwrite:

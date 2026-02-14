@@ -1,8 +1,8 @@
-# Assign config — edit this file like a normal text file.
-# Lines starting with # are ignored. Use KEY = value for settings below.
-# Set ATTIO_API_TOKEN in your environment (e.g. .env or export).
+# Assign config — edit this file like a normal text file
+# Lines starting with # are ignored. Use KEY = value for settings below
+# Set ATTIO_API_TOKEN in your environment (e.g .env )
 
-# Attio object type (e.g. unassigned_accounts)
+# Attio object type (e.g. the workspace slug/identerfier name attio)
 OBJECT_TYPE = unassigned_accounts
 
 # Rep names, comma-separated. Order affects tiebreaker when workloads are equal.
@@ -32,7 +32,8 @@ WORKLOAD_WEIGHTS = New:2, Working:1, Nurture:0.5
 INDUSTRY_WEIGHTS = Restaurants:1.0, Retail:1.0
 
 # Attribute mapping: our_key:attio_slug (used to build Account.data from Attio records) 
-# Add/remove attributes here — the code infers comapny name, industry, location_count, owner, prospect_status from key names. These are compulsory attributes and minimu requirement for the code logic to work.
+# the code infers company name, industry, location_count, owner, prospect_status from key names. These are compulsory attributes and minimum requirement for the code logic to work.
+# Add/remove additional attributes here. Its compulsory to map all the attio-object's attributes here
 ATTRIBUTE_MAPPING = company_name:company_name, location_count:location_count, industry:industry_6, prospect_status:prospect_status_6, owner:owner_6
 
 # Well-known keys (must exist in ATTRIBUTE_MAPPING). Used for scoring, display, and assignment.

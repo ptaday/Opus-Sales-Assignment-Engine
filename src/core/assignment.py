@@ -12,7 +12,11 @@ def get_rep_eligibility(
     owner_key: str,
     prospect_status_key: str,
 ) -> dict:
-    """Workload = sum of weights per rep. Ineligible if new_count >= max_new_threshold."""
+    """
+    Computes per-rep eligibility: workload (sum of weights) and ineligible if new_count >= max_new_threshold.
+    Input: rep_accounts (list[Account]), reps (list[str]), workload_weights (dict), max_new_threshold (int), owner_key (str), prospect_status_key (str)
+    Output: dict
+    """
     grouped = defaultdict(list)
     for a in rep_accounts:
         owner = a.get(owner_key)
@@ -44,7 +48,11 @@ def assign_accounts(
     workload_weights: dict,
     max_new_threshold: int,
 ) -> tuple[list[Account], list[Account]]:
-    """Workload-weighted round-robin; rep becomes ineligible when New hits threshold."""
+    """
+    Assigns eligible companies to reps via workload-weighted round-robin; rep becomes ineligible when New count hits threshold.
+    Input: eligible (list[Account]), rep_eligibility (dict), workload_weights (dict), max_new_threshold (int)
+    Output: tuple[list[Account], list[Account]]
+    """
     assigned = []
     unassigned = []
 
