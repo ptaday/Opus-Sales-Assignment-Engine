@@ -219,8 +219,14 @@ sequenceDiagram
 ├── config/
 │   ├── seed.txt       # Seed: output path, prompt, columns, row count
 │   └── assign.txt     # Assign: reps, thresholds, weights, attribute mapping
-├── docs/
-│   └── ARCHITECTURE.md
+├── docs/         
+│   └── ARCHITECTURE.md       #Architecture overview, flows, project structure
+│   ├── DESIGN_DECISIONS.md   #System goal, assumptions, scoring logic
+│   └── ERROR_HANDLING.md     
+│   ├── IDEMPOTENCY.md        
+│   ├── IMPROVEMENTS.md      #Future improvements, tricky bits
+│   └── SUMMARY_OF_FILES.md 
+│   └── TESTING.md           #Unit tests, testing coverage
 ├── out/               # Outputs (gitignored)
 │   ├── seed_companies.csv
 │   ├── record.csv
