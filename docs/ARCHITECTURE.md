@@ -228,6 +228,8 @@ sequenceDiagram
 │   └── summaries/
 ├── scripts/
 │   └── run_local.sh
+├── simulations/
+│   └── monte_carlo_simulation_round_robin_order.jsx
 ├── src/
 │   ├── main.py        # CLI entry
 │   ├── core/

@@ -2,20 +2,29 @@
 import os
 import sys
 import time
+from typing import Optional
+
 import requests
 import dotenv
 
 from src.models import Account
 
 API_BASE = "https://api.attio.com/v2"
-from dotenv import load_dotenv
+
+# Rate limiting: min seconds between requests
+ATTIO_FETCH_DELAY_SEC = 2.0   # ~30 fetch requests/min
+ATTIO_UPDATE_DELAY_SEC = 1.5   # ~40 updates/min
+ATTIO_VERIFY_DELAY_SEC = 0.5
+ATTIO_FETCH_RETRIES = 3
+ATTIO_UPDATE_RETRIES = 3
+ATTIO_VERIFY_RETRIES = 2
 
 
 class AttioService:
-    def __init__(self, config: dict, api_token: str | None = None):
+    def __init__(self, config: dict, api_token: Optional[str] = None):
         """
         Initializes the Attio API service with config and token; sets object type, URLs, and attribute mappings.
-        Input: config (dict), api_token (str | None)
+        Input: config (dict), api_token (Optional[str])
         Output: None
         """
         self.config = config
@@ -42,9 +51,33 @@ class AttioService:
         """
         return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
 
+    def _post_with_retry(self, payload: dict, description: str):
+        """POST with retries on 429 / network errors. Returns response or raises / exits."""
+        for attempt in range(1, ATTIO_FETCH_RETRIES + 1):
+            try:
+                r = requests.post(self.api_url, json=payload, headers=self._headers(), timeout=15)
+                if r.status_code == 200:
+                    return r
+                if r.status_code == 429:
+                    wait = 2 ** attempt
+                    print(f"⏳ Rate limited during {description}. Retrying in {wait}s... ({attempt}/{ATTIO_FETCH_RETRIES})")
+                    time.sleep(wait)
+                else:
+                    print(f"✗ API Error during {description}: {r.status_code} — {r.text}")
+                    sys.exit(1)
+            except requests.RequestException as e:
+                wait = 2 ** attempt
+                print(f"✗ Network error during {description}: {e}. Retry in {wait}s... ({attempt}/{ATTIO_FETCH_RETRIES})")
+                if attempt == ATTIO_FETCH_RETRIES:
+                    sys.exit(1)
+                time.sleep(wait)
+        print(f"✗ All {ATTIO_FETCH_RETRIES} retries failed during {description}")
+        sys.exit(1)
+
     def _paginated_fetch(self, payload: dict, description: str) -> list[Account]:
         """
         Fetches all records from Attio query API with pagination and maps them to Account objects.
+        Uses retry on 429/network and rate-limiting delay between pages.
         Input: payload (dict), description (str)
         Output: list[Account]
         """
@@ -53,14 +86,7 @@ class AttioService:
         limit = payload.get("limit", 500)
         while True:
             payload["offset"] = offset
-            try:
-                r = requests.post(self.api_url, json=payload, headers=self._headers(), timeout=15)
-            except requests.RequestException as e:
-                print(f"✗ Network error during {description}: {e}")
-                sys.exit(1)
-            if r.status_code != 200:
-                print(f"✗ API Error during {description}: {r.status_code} — {r.text}")
-                sys.exit(1)
+            r = self._post_with_retry(payload, description)
             data = r.json()
             records = data.get("data", [])
             if not records:
@@ -70,6 +96,7 @@ class AttioService:
             if len(records) < limit:
                 break
             offset += limit
+            time.sleep(ATTIO_FETCH_DELAY_SEC)
         return accounts
 
     def fetch_eligible_candidates(self) -> tuple[list[Account], list[Account]]:
@@ -148,36 +175,51 @@ class AttioService:
     def verify_still_unassigned(self, record_id: str) -> bool:
         """
         Checks via API whether the record still has no owner (to avoid overwriting concurrent assignment).
+        Rate-limited and retried on 429/network.
         Input: record_id (str)
         Output: bool
         """
         if not self.token:
             return True
+        time.sleep(ATTIO_VERIFY_DELAY_SEC)
         url = f"{API_BASE}/objects/{self.object_type}/records/{record_id}"
-        try:
-            r = requests.get(url, headers=self._headers(), timeout=10)
-            if r.status_code != 200:
+        for attempt in range(1, ATTIO_VERIFY_RETRIES + 1):
+            try:
+                r = requests.get(url, headers=self._headers(), timeout=10)
+                if r.status_code == 200:
+                    data = r.json()
+                    owner_values = data.get("data", {}).get("values", {}).get(self.owner_slug, [])
+                    if owner_values:
+                        print(f"  ⚠ Record {record_id} was assigned since last fetch — skipping")
+                        return False
+                    return True
+                if r.status_code == 429 and attempt < ATTIO_VERIFY_RETRIES:
+                    wait = 2 ** attempt
+                    time.sleep(wait)
+                    continue
                 print(f"  ⚠ Could not verify {record_id} (HTTP {r.status_code}) — proceeding")
                 return True
-            data = r.json()
-            owner_values = data.get("data", {}).get("values", {}).get(self.owner_slug, [])
-            if owner_values:
-                print(f"  ⚠ Record {record_id} was assigned since last fetch — skipping")
-                return False
-            return True
-        except requests.RequestException as e:
-            print(f"  ⚠ Verification failed for {record_id}: {e} — proceeding")
-            return True
+            except requests.RequestException as e:
+                if attempt < ATTIO_VERIFY_RETRIES:
+                    time.sleep(2 ** attempt)
+                    continue
+                print(f"  ⚠ Verification failed for {record_id}: {e} — proceeding")
+                return True
+        return True
 
-    def update_attio_record(self, record_id: str, owner: str, retries: int = 3) -> bool:
+    def update_attio_record(self, record_id: str, owner: str, retries: Optional[int] = None) -> bool:
         """
         Updates the Attio record's owner and prospect_status to New; retries on rate limit or network errors.
-        Input: record_id (str), owner (str), retries (int)
+        Rate-limited between calls.
+        Input: record_id (str), owner (str), retries (Optional[int])
         Output: bool
         """
+        if retries is None:
+            retries = ATTIO_UPDATE_RETRIES
         if not self.token:
             print(f"  ⚠ No API token — skipping update for {record_id}")
             return False
+        time.sleep(ATTIO_UPDATE_DELAY_SEC)
         url = f"{API_BASE}/objects/{self.object_type}/records/{record_id}"
         payload = {"data": {"values": {self.owner_slug: owner, self.prospect_status_slug: "New"}}}
         for attempt in range(1, retries + 1):

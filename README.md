@@ -12,6 +12,13 @@ cp .env.example .env
 # Edit .env and set ATTIO_API_TOKEN and ANTHROPIC_API_KEY
 ```
 
+### Monte Carlo Simulation (optional)
+```bash
+cd simulation/
+npm install
+npm start
+```
+
 ## Config
 
 - **config/seed.txt** — output path, CSV columns, prompt, row count for seed data.
@@ -43,6 +50,31 @@ Or use the script:
 ./scripts/run_local.sh assign
 ./scripts/run_local.sh assign --dry-run
 ```
+
+## Testing
+
+From project root (with venv activated):
+
+```bash
+# Unit tests only (no live APIs; fast)
+pytest tests/unit/ -v
+
+# Unit tests with coverage
+pytest tests/unit/ -v --cov=src --cov-report=term-missing
+
+# API tests (require ATTIO_API_TOKEN and/or ANTHROPIC_API_KEY)
+pytest tests/api/ -v -m api
+
+# All tests (unit + API; API tests skip if credentials missing)
+pytest tests/ -v
+```
+
+- **tests/unit/** — Core, models, config, seed service, Attio service (HTTP mocked with `responses`). No real API calls.
+- **tests/api/** — Live Attio query + optional no-op update check; live Anthropic `messages.create`. Set `ATTIO_TEST_RECORD_ID` to run the no-op update test (same record, same values; no data change).
+
+Skip API tests in CI unless secrets are available: `pytest tests/unit/` or `pytest -m "not api"`.
+
+See **docs/TESTING.md** for full testing docs. Use **./scripts/run_tests.sh** to run unit/api/all with optional `--coverage`.
 
 ## Outputs
 

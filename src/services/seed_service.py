@@ -2,10 +2,11 @@
 import os
 import json
 import csv
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv() 
+load_dotenv()
 
 try:
     import anthropic
@@ -13,6 +14,24 @@ except ImportError:
     anthropic = None
 
 from src.utils.config import load_seed_config
+
+# Anthropic: max 5 requests per minute; retries for rate limit / transient errors
+ANTHROPIC_MAX_REQUESTS_PER_MINUTE = 5
+ANTHROPIC_RETRIES = 5
+_anthropic_call_times: list[float] = []
+
+
+def _anthropic_rate_limit() -> None:
+    """Enforce max 5 Anthropic API calls per minute."""
+    now = time.monotonic()
+    window = 60.0
+    _anthropic_call_times[:] = [t for t in _anthropic_call_times if now - t < window]
+    if len(_anthropic_call_times) >= ANTHROPIC_MAX_REQUESTS_PER_MINUTE:
+        sleep_until = _anthropic_call_times[0] + window - now
+        if sleep_until > 0:
+            time.sleep(sleep_until)
+        _anthropic_call_times.pop(0)
+    _anthropic_call_times.append(time.monotonic())
 
 
 def _format_cell(value, key: str):
@@ -49,6 +68,7 @@ def load_existing_keys(csv_path: Path, key_field: str) -> set:
 def generate_companies(api_key: str, config: dict) -> list[dict]:
     """
     Calls Claude API with the seed prompt to generate a list of company dicts; validates required fields.
+    Rate-limited to 5 req/min; retries on rate limit or transient errors.
     Input: api_key (str), config (dict)
     Output: list[dict]
     """
@@ -60,22 +80,45 @@ def generate_companies(api_key: str, config: dict) -> list[dict]:
         fieldnames=", ".join(config["fieldnames"]),
     )
     print("Calling Claude API to generate company data...")
-    message = client.messages.create(
-        model=config["model"],
-        max_tokens=config["max_tokens"],
-        messages=[{"role": "user", "content": prompt}],
-    )
-    raw = message.content[0].text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[1]
-        raw = raw.rsplit("```", 1)[0]
-    companies = json.loads(raw)
-    for c in companies:
-        for field in config["fieldnames"]:
-            if field not in c:
-                raise ValueError(f"Missing field '{field}' in generated company: {c}")
-    print(f"Generated {len(companies)} companies from Claude API.")
-    return companies
+    for attempt in range(1, ANTHROPIC_RETRIES + 1):
+        _anthropic_rate_limit()
+        try:
+            message = client.messages.create(
+                model=config["model"],
+                max_tokens=config["max_tokens"],
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = message.content[0].text.strip()
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[1]
+                raw = raw.rsplit("```", 1)[0]
+            companies = json.loads(raw)
+            for c in companies:
+                for field in config["fieldnames"]:
+                    if field not in c:
+                        raise ValueError(f"Missing field '{field}' in generated company: {c}")
+            print(f"Generated {len(companies)} companies from Claude API.")
+            return companies
+        except Exception as e:
+            msg = str(e).lower()
+            is_retryable = (
+                "rate" in msg or "429" in msg or "timeout" in msg or "connection" in msg
+                or isinstance(e, (ConnectionError, TimeoutError, OSError))
+            )
+            try:
+                if getattr(anthropic, "RateLimitError", None) and isinstance(e, anthropic.RateLimitError):
+                    is_retryable = True
+            except Exception:
+                pass
+            if is_retryable:
+                if attempt < ANTHROPIC_RETRIES:
+                    wait = 2 ** attempt
+                    print(f"⏳ Claude API error ({e}). Retrying in {wait}s... ({attempt}/{ANTHROPIC_RETRIES})")
+                    time.sleep(wait)
+                else:
+                    raise
+            else:
+                raise
 
 
 def append_to_csv(companies: list[dict], csv_path: Path, config: dict) -> tuple[int, int]:
