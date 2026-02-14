@@ -68,6 +68,3 @@ Coverage is over `src/`; API tests are excluded when measuring so results don’
 - Default: run unit tests only: `pytest tests/unit/ -v`.
 - With secrets: run all: `pytest tests/ -v` or `pytest tests/api/ -v -m api`.
 
-## Result
-
-<img width="908" height="281" alt="Screenshot 2026-02-14 at 5 47 52 PM" src="https://github.com/user-attachments/assets/292e8f26-7f43-410f-903e-442fbcea7abe" />
