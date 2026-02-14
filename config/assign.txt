@@ -9,7 +9,7 @@ OBJECT_TYPE = unassigned_accounts
 REPS = Alice, Bob, Carol
 
 # Max "New" accounts per rep — rep becomes ineligible when they reach this many New (existing + assigned)
-MAX_NEW_THRESHOLD = 5
+MAX_NEW_THRESHOLD = 3
 
 # Industries that are eligible for assignment (comma-separated)
 ELIGIBLE_INDUSTRIES = Restaurants, Retail

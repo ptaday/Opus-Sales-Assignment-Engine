@@ -11,7 +11,7 @@ COLUMNS = company_name, location_count, industry, prospect_status, owner
 DUPLICATE_KEY = company_name
 
 # How many rows to generate per run
-NUM_ROWS = 40
+NUM_ROWS = 30
 
 # AI model and token limit (optional)
 MODEL = claude-opus-4-6
@@ -33,11 +33,11 @@ Rules:
    - Use a mix of industries and location_counts for these (vary freely).
 
 2. UNASSIGNED ACCOUNTS (15 companies, owner="" AND prospect_status=""):
-   - 16 ELIGIBLE: industry is "Restaurants" or "Retail", location_count between 5 and 50 (inclusive). Vary the location_counts well.
-   - 9 INELIGIBLE for clear reasons:
-     - 3 with location_count < 5 and industry "Restaurants" or "Retail"
+   - 8 ELIGIBLE: industry is "Restaurants" or "Retail", location_count between 5 and 50 (inclusive). Vary the location_counts well.
+   - 7 INELIGIBLE for clear reasons:
+     - 2 with location_count < 5 and industry "Restaurants" or "Retail"
      - 2 with location_count > 50 and industry "Restaurants" or "Retail"
-     - 4 with industry "Healthcare" or "Other" and location_count between 5-50
+     - 3 with industry "Healthcare" or "Other" and location_count between 5-50
 
 3. GENERAL:
    - Industry distribution across all {num_rows}: Restaurants ~40%, Retail ~30%, Healthcare ~15%, Other ~15%

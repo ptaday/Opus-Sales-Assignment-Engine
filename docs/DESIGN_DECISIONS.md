@@ -21,7 +21,7 @@ Distribute new prospects across sales reps in Attio fairly, prevent overload, re
 
 - **Company scoring:** Pure function, no I/O. Location weight: `70 × ln(location_count) / ln(50)` (log-scaled, 0–70). Industry multiplier (Retail/Restaurants = 1.0; extensible). Log scaling prevents large-location outliers from dominating.
 
-## Rep Assignment (Round Robin Ordering)
+## Rep Assignment (Workload-weighted Round Robin Ordering)
 
 Three models evaluated; scoring model chosen:
 
